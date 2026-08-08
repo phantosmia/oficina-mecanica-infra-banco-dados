@@ -20,7 +20,7 @@ Provisiona uma instância **Amazon RDS PostgreSQL** de forma autocontida: este r
 
 ## Por que uma VPC própria?
 
-O repositório de infraestrutura Kubernetes (`oficina-mecanica-infra-kubernetes`) ainda é um placeholder — ver seu README. Para que este repositório tenha uma implementação real e independente desde já, o banco vive em sua própria VPC. Quando o repositório de Kubernetes existir de fato, o caminho recomendado é popular `allowed_cidr_blocks` com o CIDR da VPC do EKS e configurar VPC Peering entre as duas VPCs — esse trabalho fica para uma etapa futura.
+Para manter este repositório independente do repositório de infraestrutura Kubernetes (`oficina-mecanica-infra-kubernetes`) — nenhum dos dois precisa existir primeiro, nem depende do outro para ser aplicado — o banco vive em sua própria VPC. Agora que o repositório de Kubernetes está implementado, o caminho recomendado é popular `allowed_cidr_blocks` com o output `vpc_cidr_block` daquele repositório e, se necessário, configurar VPC Peering entre as duas VPCs para reduzir a exposição da porta 5432 — esse trabalho fica para uma etapa futura, quando também a automação da sincronização de outputs entre repositórios for implementada.
 
 ## Uso local
 
@@ -79,5 +79,5 @@ Ver [`variables.tf`](variables.tf) e [`outputs.tf`](outputs.tf) para a lista com
 ## Repositórios relacionados
 
 - [oficina-mecanica-fiap](https://github.com/phantosmia/oficina-mecanica-fiap) — aplicação principal (consome este banco).
-- [oficina-mecanica-infra-kubernetes](https://github.com/phantosmia/oficina-mecanica-infra-kubernetes) — infraestrutura do cluster EKS (placeholder).
+- [oficina-mecanica-infra-kubernetes](https://github.com/phantosmia/oficina-mecanica-infra-kubernetes) — infraestrutura do cluster EKS.
 - [oficina-mecanica-lambda-auth](https://github.com/phantosmia/oficina-mecanica-lambda-auth) — function serverless de autenticação via CPF (placeholder).
