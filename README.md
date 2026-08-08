@@ -20,7 +20,7 @@ Provisiona uma instância **Amazon RDS PostgreSQL** de forma autocontida: este r
 
 ## Por que uma VPC própria?
 
-Para manter este repositório independente do repositório de infraestrutura Kubernetes (`oficina-mecanica-infra-kubernetes`) — nenhum dos dois precisa existir primeiro, nem depende do outro para ser aplicado — o banco vive em sua própria VPC. Agora que o repositório de Kubernetes está implementado, o caminho recomendado é popular `allowed_cidr_blocks` com o output `vpc_cidr_block` daquele repositório e, se necessário, configurar VPC Peering entre as duas VPCs para reduzir a exposição da porta 5432 — esse trabalho fica para uma etapa futura, quando também a automação da sincronização de outputs entre repositórios for implementada.
+Este repositório não lê o state de nenhum outro (é o primeiro da cadeia de apply: banco → cluster → aplicação — ver "Integração" abaixo), então o banco vive em sua própria VPC em vez de depender da VPC do repositório de infraestrutura Kubernetes (`oficina-mecanica-infra-kubernetes`) existir primeiro. O caminho recomendado para reduzir a exposição da porta 5432 é popular `allowed_cidr_blocks` com o output `vpc_cidr_block` daquele repositório e, se necessário, configurar VPC Peering entre as duas VPCs — isso fica deliberadamente manual (não automatizado via remote state), porque afeta regras de security group e é uma decisão de rede que vale revisar antes de aplicar, não um dado que deveria fluir sozinho a cada apply do outro repositório.
 
 ## Uso local
 
@@ -60,17 +60,14 @@ Workflow em [`.github/workflows/terraform.yml`](.github/workflows/terraform.yml)
 | Variable | `TF_LOCK_TABLE` | Tabela DynamoDB de lock (mesma do `oficina-mecanica-fiap`) |
 | Variable | `TF_STATE_REGION` | Região do backend S3 |
 
-## Integração com o repositório da aplicação (`oficina-mecanica-fiap`)
+## Integração com os outros repositórios (via `terraform_remote_state`)
 
-Depois de um `apply` bem-sucedido (local ou via CI em `homologacao`/`producao`), copie os outputs para o repositório `oficina-mecanica-fiap`:
+Este repositório, o `oficina-mecanica-infra-kubernetes` e o `oficina-mecanica-fiap` compartilham o mesmo backend S3 (criado por `infra/backend` no repositório `oficina-mecanica-fiap`). Isso permite que os outros dois leiam os outputs deste repositório **automaticamente**, sem copiar nada manualmente:
 
-| Output deste repositório | Onde colar no `oficina-mecanica-fiap` |
-|---|---|
-| `terraform output -raw rds_endpoint` | GitHub **variable** `RDS_ENDPOINT` |
-| `terraform output -raw rds_secret_arn` | GitHub **variable** `RDS_SECRET_ARN` |
-| `terraform output -raw rds_password` | GitHub **secret** `POSTGRES_PASSWORD` |
+- `oficina-mecanica-infra-kubernetes` lê `rds_secret_arn` para autorizar o External Secrets Operator a ler esse secret.
+- `oficina-mecanica-fiap` (`infra/aws`) lê `rds_endpoint` e `rds_password` para o secret e o ConfigMap da API.
 
-Essa sincronização é **manual** por enquanto — a automação via Terraform remote state entre os dois repositórios fica para uma etapa futura, quando o repositório de infraestrutura Kubernetes também tiver implementação real.
+Isso estabelece a ordem de apply da Fase 3: **este repositório primeiro**, depois `oficina-mecanica-infra-kubernetes`, depois `oficina-mecanica-fiap`. Se a `key` do state deste repositório no ambiente esperado (`database/<environment>/terraform.tfstate`) ainda não existir, o `plan`/`apply` dos outros dois falha com um erro de leitura do backend S3 — aplique este repositório primeiro nesse caso.
 
 ## Variáveis e outputs
 
