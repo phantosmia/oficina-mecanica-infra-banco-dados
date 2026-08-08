@@ -1,0 +1,116 @@
+name: Terraform Banco de Dados
+
+on:
+  pull_request:
+  push:
+    branches:
+      - homologacao
+      - producao
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-db-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || vars.AWS_REGION || 'us-east-1' }}
+  TF_LOCK_TABLE: ${{ vars.TF_LOCK_TABLE }}
+
+jobs:
+  plan:
+    name: Plan (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform init (sem backend remoto — plan de validação, não usa state real)
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -var="environment=dev-preview"
+
+  apply:
+    name: Apply (${{ github.ref_name }})
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Preparar backend remoto do Terraform
+        env:
+          TF_BACKEND_CONFIG: ${{ secrets.TF_BACKEND_CONFIG }}
+        run: |
+          if [ -n "${TF_BACKEND_CONFIG}" ]; then
+            printf '%s\n' "${TF_BACKEND_CONFIG}" | sed "s#/dev/#/${{ github.ref_name }}/#" > backend.hcl
+          else
+            if [ -z "${TF_STATE_BUCKET}" ] || [ -z "${TF_LOCK_TABLE}" ]; then
+              echo "Configure o secret TF_BACKEND_CONFIG ou as variables TF_STATE_BUCKET e TF_LOCK_TABLE." >&2
+              exit 1
+            fi
+
+            cat > backend.hcl <<EOF
+          bucket         = "${TF_STATE_BUCKET}"
+          key            = "database/${{ github.ref_name }}/terraform.tfstate"
+          region         = "${TF_STATE_REGION}"
+          dynamodb_table = "${TF_LOCK_TABLE}"
+          encrypt        = true
+          EOF
+          fi
+
+      - name: Terraform init
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Terraform plan
+        run: terraform plan -out=tfplan -var="environment=${{ github.ref_name }}"
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve tfplan
+
+      - name: Resumo dos outputs
+        run: |
+          echo "Copie estes valores para o repositório oficina-mecanica-fiap (variables/secrets do GitHub):"
+          echo "RDS_ENDPOINT (variable)  = $(terraform output -raw rds_endpoint)"
+          echo "RDS_SECRET_ARN (variable) = $(terraform output -raw rds_secret_arn)"
+          echo "POSTGRES_PASSWORD (secret) = obtenha com: terraform output -raw rds_password"
