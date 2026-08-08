@@ -23,7 +23,7 @@ variable "vpc_cidr" {
 }
 
 variable "allowed_cidr_blocks" {
-  description = "Blocos CIDR autorizados a acessar o PostgreSQL na porta 5432. Vazio por padrão: preencha com o CIDR da VPC do EKS (ou configure VPC peering) quando o repositório oficina-mecanica-infra-kubernetes estiver implementado."
+  description = "Blocos CIDR autorizados a acessar o PostgreSQL na porta 5432. Vazio por padrão: preencha com o output vpc_cidr_block do repositório oficina-mecanica-infra-kubernetes (ou configure VPC peering entre as duas VPCs)."
   type        = list(string)
   default     = []
 }
