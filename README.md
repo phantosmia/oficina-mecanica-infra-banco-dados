@@ -67,7 +67,21 @@ Este repositório, o `oficina-mecanica-infra-kubernetes` e o `oficina-mecanica-f
 - `oficina-mecanica-infra-kubernetes` lê `rds_secret_arn` para autorizar o External Secrets Operator a ler esse secret.
 - `oficina-mecanica-fiap` (`infra/aws`) lê `rds_endpoint` e `rds_password` para o secret e o ConfigMap da API.
 
-Isso estabelece a ordem de apply da Fase 3: **este repositório primeiro**, depois `oficina-mecanica-infra-kubernetes`, depois `oficina-mecanica-fiap`. Se a `key` do state deste repositório no ambiente esperado (`database/<environment>/terraform.tfstate`) ainda não existir, o `plan`/`apply` dos outros dois falha com um erro de leitura do backend S3 — aplique este repositório primeiro nesse caso.
+```mermaid
+flowchart LR
+    DB["este repositório"] -- "rds_secret_arn" --> K8S["oficina-mecanica-infra-kubernetes"]
+    K8S -- "cluster_name, ecr_repository_url,<br/>oidc_provider_arn" --> APP["oficina-mecanica-fiap: infra/aws"]
+    DB -- "rds_endpoint, rds_password" --> APP
+```
+
+Isso estabelece a ordem de apply da Fase 3: **este repositório primeiro**, depois `oficina-mecanica-infra-kubernetes`, depois `oficina-mecanica-fiap`. Se a `key` do state deste repositório no ambiente esperado (`database/<environment>/terraform.tfstate`) ainda não existir, o `plan`/`apply` dos outros dois **falha imediatamente**, não silenciosamente:
+
+```
+Error: Unable to find remote state
+No stored state was found for the given workspace in the given backend.
+```
+
+Nesse caso, aplique este repositório primeiro, no mesmo ambiente (`dev`/`homologacao`/`producao`) que o outro está tentando ler.
 
 ## Variáveis e outputs
 
