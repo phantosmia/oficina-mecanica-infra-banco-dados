@@ -23,7 +23,7 @@ variable "vpc_cidr" {
 }
 
 variable "allowed_cidr_blocks" {
-  description = "Blocos CIDR autorizados a acessar o PostgreSQL na porta 5432. Vazio por padrão: preencha com o output vpc_cidr_block do repositório oficina-mecanica-infra-kubernetes (ou configure VPC peering entre as duas VPCs)."
+  description = "Blocos CIDR autorizados a acessar o PostgreSQL na porta 5432. Vazio por padrão: preencha com var.vpc_cidr (este mesmo repositório) se a Lambda de autenticação via CPF (oficina-mecanica-lambda-auth) for implantada nesta VPC — ver ADR-0005 em oficina-mecanica-fiap —, e/ou com o output vpc_cidr_block do repositório oficina-mecanica-infra-kubernetes (ou configure VPC peering entre as duas VPCs)."
   type        = list(string)
   default     = []
 }
