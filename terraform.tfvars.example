@@ -4,9 +4,15 @@ aws_region   = "us-east-1"
 
 vpc_cidr = "10.90.0.0/24"
 
-# Preencha com o CIDR da VPC do EKS (repositório oficina-mecanica-infra-kubernetes)
-# assim que ele existir, ou configure VPC peering entre as duas VPCs.
-allowed_cidr_blocks = []
+# CIDRs autorizados a alcançar o RDS na porta 5432. Inclui, por padrão, o
+# próprio CIDR desta VPC (vpc_cidr acima): a Lambda de autenticação via CPF
+# (oficina-mecanica-lambda-auth) roda dentro desta VPC para alcançar o RDS
+# (ver ADR-0005 em oficina-mecanica-fiap) — sem essa entrada, a conexão dela
+# falha por timeout, não por erro de credencial. Adicione também o CIDR da
+# VPC do EKS (repositório oficina-mecanica-infra-kubernetes) se outras
+# cargas de trabalho do cluster precisarem do banco, ou configure VPC
+# peering entre as duas VPCs.
+allowed_cidr_blocks = ["10.90.0.0/24"]
 
 rds_instance_class       = "db.t4g.micro"
 rds_allocated_storage    = 20

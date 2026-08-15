@@ -20,7 +20,9 @@ Provisiona uma instância **Amazon RDS PostgreSQL** de forma autocontida: este r
 
 ## Por que uma VPC própria?
 
-Este repositório não lê o state de nenhum outro (é o primeiro da cadeia de apply: banco → cluster → aplicação — ver "Integração" abaixo), então o banco vive em sua própria VPC em vez de depender da VPC do repositório de infraestrutura Kubernetes (`oficina-mecanica-infra-kubernetes`) existir primeiro. O caminho recomendado para reduzir a exposição da porta 5432 é popular `allowed_cidr_blocks` com o output `vpc_cidr_block` daquele repositório e, se necessário, configurar VPC Peering entre as duas VPCs — isso fica deliberadamente manual (não automatizado via remote state), porque afeta regras de security group e é uma decisão de rede que vale revisar antes de aplicar, não um dado que deveria fluir sozinho a cada apply do outro repositório.
+Este repositório não lê o state de nenhum outro (é o primeiro da cadeia de apply: banco → cluster → aplicação → Lambda de autenticação — ver "Integração" abaixo), então o banco vive em sua própria VPC em vez de depender da VPC do repositório de infraestrutura Kubernetes (`oficina-mecanica-infra-kubernetes`) existir primeiro. O caminho recomendado para reduzir a exposição da porta 5432 é popular `allowed_cidr_blocks` com o output `vpc_cidr_block` daquele repositório e, se necessário, configurar VPC Peering entre as duas VPCs — isso fica deliberadamente manual (não automatizado via remote state), porque afeta regras de security group e é uma decisão de rede que vale revisar antes de aplicar, não um dado que deveria fluir sozinho a cada apply do outro repositório.
+
+A Lambda de autenticação via CPF (`oficina-mecanica-lambda-auth`) roda **dentro desta VPC** para alcançar o RDS sem expô-lo publicamente (ver [ADR-0005](https://github.com/phantosmia/oficina-mecanica-fiap/blob/main/docs/adrs/0005-lambda-auth-na-vpc-do-banco.md) em `oficina-mecanica-fiap`) — por isso `allowed_cidr_blocks` também precisa incluir o próprio `vpc_cidr` desta VPC (já assim no `terraform.tfvars.example`), não só o CIDR de outra VPC.
 
 ## Uso local
 
