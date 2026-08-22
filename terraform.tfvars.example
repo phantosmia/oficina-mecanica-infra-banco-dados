@@ -8,11 +8,12 @@ vpc_cidr = "10.90.0.0/24"
 # próprio CIDR desta VPC (vpc_cidr acima): a Lambda de autenticação via CPF
 # (oficina-mecanica-lambda-auth) roda dentro desta VPC para alcançar o RDS
 # (ver ADR-0005 em oficina-mecanica-fiap) — sem essa entrada, a conexão dela
-# falha por timeout, não por erro de credencial. Adicione também o CIDR da
-# VPC do EKS (repositório oficina-mecanica-infra-kubernetes) se outras
-# cargas de trabalho do cluster precisarem do banco, ou configure VPC
-# peering entre as duas VPCs.
-allowed_cidr_blocks = ["10.90.0.0/24"]
+# falha por timeout, não por erro de credencial. O segundo CIDR é o da VPC
+# do EKS (oficina-mecanica-infra-kubernetes, var.vpc_cidr de lá) — os pods
+# da aplicação principal também precisam alcançar o RDS. A rota entre as
+# duas VPCs (VPC Peering) é criada automaticamente por aquele repositório;
+# esta liberação no security group continua manual de propósito.
+allowed_cidr_blocks = ["10.90.0.0/24", "10.0.0.0/16"]
 
 rds_instance_class       = "db.t4g.micro"
 rds_allocated_storage    = 20

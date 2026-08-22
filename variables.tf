@@ -23,7 +23,7 @@ variable "vpc_cidr" {
 }
 
 variable "allowed_cidr_blocks" {
-  description = "Blocos CIDR autorizados a acessar o PostgreSQL na porta 5432. Vazio por padrão: preencha com var.vpc_cidr (este mesmo repositório) se a Lambda de autenticação via CPF (oficina-mecanica-lambda-auth) for implantada nesta VPC — ver ADR-0005 em oficina-mecanica-fiap —, e/ou com o output vpc_cidr_block do repositório oficina-mecanica-infra-kubernetes (ou configure VPC peering entre as duas VPCs)."
+  description = "Blocos CIDR autorizados a acessar o PostgreSQL na porta 5432. Vazio por padrão: preencha com var.vpc_cidr (este mesmo repositório) se a Lambda de autenticação via CPF (oficina-mecanica-lambda-auth) for implantada nesta VPC — ver ADR-0005 em oficina-mecanica-fiap —, e com o CIDR da VPC do repositório oficina-mecanica-infra-kubernetes (var.vpc_cidr de lá, 10.0.0.0/16 por padrão) para os pods da aplicação principal alcançarem o RDS. O VPC Peering entre as duas VPCs é criado automaticamente pelo repositório oficina-mecanica-infra-kubernetes (ele já lê o state deste repositório) — falta só essa liberação no security group, que continua manual de propósito (mesmo motivo documentado no README daquele repositório: não queremos que o security group do RDS mude sozinho a cada apply de outro repositório)."
   type        = list(string)
   default     = []
 }
