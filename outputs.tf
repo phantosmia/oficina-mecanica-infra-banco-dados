@@ -3,6 +3,16 @@ output "vpc_id" {
   value       = aws_vpc.database.id
 }
 
+output "vpc_cidr_block" {
+  description = "Bloco CIDR da VPC do banco de dados. Consumido por oficina-mecanica-infra-kubernetes para configurar o VPC Peering entre as duas VPCs."
+  value       = aws_vpc.database.cidr_block
+}
+
+output "default_route_table_id" {
+  description = "ID da route table padrão (única, já que esta VPC não tem Internet Gateway/NAT) da VPC do banco de dados. Usado por oficina-mecanica-infra-kubernetes para adicionar a rota de volta ao CIDR do EKS via VPC Peering."
+  value       = aws_vpc.database.default_route_table_id
+}
+
 output "private_subnet_ids" {
   description = "Subnets privadas usadas pelo RDS."
   value       = aws_subnet.database[*].id
