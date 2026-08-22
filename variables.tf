@@ -47,9 +47,9 @@ variable "rds_max_allocated_storage" {
 }
 
 variable "rds_engine_version" {
-  description = "Versão do PostgreSQL no RDS."
+  description = "Versão do PostgreSQL no RDS. 16.3 foi descontinuada pela AWS (RDS retira minor versions antigas periodicamente) — confira `aws rds describe-db-engine-versions --engine postgres` se o apply falhar com \"Cannot find version\"."
   type        = string
-  default     = "16.3"
+  default     = "16.14"
 }
 
 variable "rds_database_name" {
