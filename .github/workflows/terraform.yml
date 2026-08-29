@@ -46,8 +46,19 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform init (sem backend remoto — plan de validação, não usa state real)
-        run: terraform init -backend=false
+      - name: Terraform init (backend local — plan de validação, não usa state real)
+        # Terraform >= 1.15 recusa "terraform plan" após "init -backend=false"
+        # quando a config declara backend "s3" ("Backend initialization
+        # required" mesmo com -backend=false) — o override para backend
+        # "local" contorna sem precisar tocar no state real só para validar
+        # um PR.
+        run: |
+          cat > override.tf <<'EOF'
+          terraform {
+            backend "local" {}
+          }
+          EOF
+          terraform init
 
       - name: Terraform validate
         run: terraform validate
