@@ -19,6 +19,13 @@ env:
   TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
   TF_STATE_REGION: ${{ vars.TF_STATE_REGION || vars.AWS_REGION || 'us-east-1' }}
   TF_LOCK_TABLE: ${{ vars.TF_LOCK_TABLE }}
+  # var.allowed_cidr_blocks é [] por padrão (ver variables.tf) — sem essa
+  # liberação, tanto a Lambda Authenticate (mesma VPC) quanto os pods da
+  # aplicação principal (VPC do EKS, via VPC Peering) falham a conexão com
+  # o RDS por timeout, não por erro de credencial. A variable do repositório
+  # existe justamente para não deixar esse valor cair no default vazio a
+  # cada apply via CI.
+  TF_VAR_allowed_cidr_blocks: ${{ vars.ALLOWED_CIDR_BLOCKS }}
 
 jobs:
   plan:
